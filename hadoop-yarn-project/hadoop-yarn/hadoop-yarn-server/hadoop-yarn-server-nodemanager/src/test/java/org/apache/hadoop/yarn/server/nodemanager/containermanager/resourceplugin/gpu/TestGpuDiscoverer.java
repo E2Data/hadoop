@@ -101,7 +101,7 @@ public class TestGpuDiscoverer {
     GpuDeviceInformation info = plugin.getGpuDeviceInformation();
 
     Assert.assertTrue(info.getGpus().size() > 0);
-    Assert.assertEquals(plugin.getGpusUsableByYarn().size(),
+    Assert.assertEquals(plugin.getGpusUsableByYarn(null).size(),
         info.getGpus().size());
   }
 
@@ -114,7 +114,7 @@ public class TestGpuDiscoverer {
     GpuDiscoverer plugin = new GpuDiscoverer();
     try {
       plugin.initialize(conf);
-      plugin.getGpusUsableByYarn();
+      plugin.getGpusUsableByYarn(null);
       Assert.fail("Illegal format, should fail.");
     } catch (YarnException e) {
       // Expected
@@ -125,7 +125,7 @@ public class TestGpuDiscoverer {
     plugin = new GpuDiscoverer();
     plugin.initialize(conf);
 
-    List<GpuDevice> usableGpuDevices = plugin.getGpusUsableByYarn();
+    List<GpuDevice> usableGpuDevices = plugin.getGpusUsableByYarn(null);
     Assert.assertEquals(4, usableGpuDevices.size());
 
     Assert.assertTrue(0 == usableGpuDevices.get(0).getIndex());

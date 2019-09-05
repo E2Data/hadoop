@@ -141,7 +141,7 @@ public class GpuDiscoverer {
    * @return List of GPU devices
    * @throws YarnException when any issue happens
    */
-  public synchronized List<GpuDevice> getGpusUsableByYarn()
+  public synchronized List<GpuDevice> getGpusUsableByYarn(String filterName)
       throws YarnException {
     validateConfOrThrowException();
 
@@ -171,10 +171,14 @@ public class GpuDiscoverer {
              i++) {
           List<PerGpuDeviceInformation> gpuInfos =
               lastDiscoveredGpuInformation.getGpus();
-          gpuDevices.add(new GpuDevice(i, gpuInfos.get(i).getMinorNumber()));
+          String canonicalGpuProductName = canonicalProductName(gpuInfos.get(i).getProductName());
+          if((filterName == null) || ((filterName != null) && (canonicalGpuProductName.equals(filterName)))) {
+            gpuDevices.add(new GpuDevice(i, gpuInfos.get(i).getMinorNumber()));
+          }
         }
       }
     } else{
+      //TODO: Cannot handle this case yet. The allowed devices should be the AUTOMATICALLY_DISCOVER_GPU_DEVICES
       for (String s : allowedDevicesStr.split(",")) {
         if (s.trim().length() > 0) {
           String[] kv = s.trim().split(":");
@@ -192,6 +196,17 @@ public class GpuDiscoverer {
     }
 
     return gpuDevices;
+  }
+
+  /**
+   * Removes all spaces from a GPU product name and returns it in lower-case
+   *
+   * @param productName Product name of a GPU device as extracted by the nvidia-smi utility
+   * @return Product name in normalized form
+   */
+  public String canonicalProductName(String productName){
+
+    return productName.replaceAll(" ", "").replaceAll("-","").toLowerCase();
   }
 
   public synchronized void initialize(Configuration conf) throws YarnException {

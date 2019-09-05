@@ -40,10 +40,15 @@ public class GpuResourcePlugin implements ResourcePlugin {
   private GpuResourceHandlerImpl gpuResourceHandler = null;
   private GpuNodeResourceUpdateHandler resourceDiscoverHandler = null;
   private DockerCommandPlugin dockerCommandPlugin = null;
+  private String gpuProductName;
+
+  public GpuResourcePlugin(String gpuProductName){
+    this.gpuProductName = gpuProductName;
+  }
 
   @Override
   public synchronized void initialize(Context context) throws YarnException {
-    resourceDiscoverHandler = new GpuNodeResourceUpdateHandler();
+    resourceDiscoverHandler = new GpuNodeResourceUpdateHandler(gpuProductName);
     GpuDiscoverer.getInstance().initialize(context.getConf());
     dockerCommandPlugin =
         GpuDockerCommandPluginFactory.createGpuDockerCommandPlugin(
@@ -56,7 +61,7 @@ public class GpuResourcePlugin implements ResourcePlugin {
       PrivilegedOperationExecutor privilegedOperationExecutor) {
     if (gpuResourceHandler == null) {
       gpuResourceHandler = new GpuResourceHandlerImpl(context, cGroupsHandler,
-          privilegedOperationExecutor);
+          privilegedOperationExecutor, gpuProductName);
     }
 
     return gpuResourceHandler;

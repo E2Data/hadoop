@@ -187,7 +187,7 @@ public class NvidiaDockerV1CommandPlugin implements DockerCommandPlugin {
 
   @VisibleForTesting
   protected boolean requestsGpu(Container container) {
-    return GpuResourceAllocator.getRequestedGpus(container.getResource()) > 0;
+    return GpuResourceAllocator.getRequestedGpus(container.getResource(), null) > 0;
   }
 
   /**

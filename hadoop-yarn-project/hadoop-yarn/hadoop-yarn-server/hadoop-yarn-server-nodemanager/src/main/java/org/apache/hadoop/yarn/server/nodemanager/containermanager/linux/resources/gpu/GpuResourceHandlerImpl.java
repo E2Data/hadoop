@@ -51,13 +51,16 @@ public class GpuResourceHandlerImpl implements ResourceHandler {
   private GpuResourceAllocator gpuAllocator;
   private CGroupsHandler cGroupsHandler;
   private PrivilegedOperationExecutor privilegedOperationExecutor;
+  private String gpuProductName;
 
   public GpuResourceHandlerImpl(Context nmContext,
       CGroupsHandler cGroupsHandler,
-      PrivilegedOperationExecutor privilegedOperationExecutor) {
+      PrivilegedOperationExecutor privilegedOperationExecutor, String gpuProductName) {
     this.cGroupsHandler = cGroupsHandler;
     this.privilegedOperationExecutor = privilegedOperationExecutor;
-    gpuAllocator = new GpuResourceAllocator(nmContext);
+    this.gpuProductName = gpuProductName;
+    gpuAllocator = new GpuResourceAllocator(nmContext, gpuProductName);
+    LOG.info("## GMYTIL ## : New GpuResourceHandlerImpl created for resource "+gpuProductName);
   }
 
   @Override
@@ -66,7 +69,7 @@ public class GpuResourceHandlerImpl implements ResourceHandler {
     List<GpuDevice> usableGpus;
     try {
       usableGpus = GpuDiscoverer.getInstance()
-          .getGpusUsableByYarn();
+          .getGpusUsableByYarn(gpuProductName);
       if (usableGpus == null || usableGpus.isEmpty()) {
         String message = "GPU is enabled on the NodeManager, but couldn't find "
             + "any usable GPU devices, please double check configuration.";
@@ -86,6 +89,8 @@ public class GpuResourceHandlerImpl implements ResourceHandler {
     this.cGroupsHandler.initializeCGroupController(
         CGroupsHandler.CGroupController.DEVICES);
 
+    LOG.info("## GMYTIL ## : Cgroups initialized without an exception.");
+
     return null;
   }
 
@@ -98,9 +103,19 @@ public class GpuResourceHandlerImpl implements ResourceHandler {
     GpuResourceAllocator.GpuAllocation allocation = gpuAllocator.assignGpus(
         container);
 
+    ///////////// GMYTIL code //////////////////
+    if(allocation != null && !allocation.getAllowedGPUs().isEmpty()){
+      LOG.info("## GMYTIL ## : gpus were allocated");
+    }else{
+      LOG.info("## GMYTIL ## : no gpu allocation");
+    }
+    ///////////// GMYTIL code //////////////////
+
+    LOG.info("## GMYTIL ## : Ready to create cgroup in the DEVICES subsystem");
     // Create device cgroups for the container
     cGroupsHandler.createCGroup(CGroupsHandler.CGroupController.DEVICES,
         containerIdStr);
+    LOG.info("## GMYTIL ## : Done");
     if (!DockerLinuxContainerRuntime.isDockerContainerRequested(
         container.getLaunchContext().getEnvironment())) {
       // Write to devices cgroup only for non-docker container. The reason is
@@ -149,6 +164,7 @@ public class GpuResourceHandlerImpl implements ResourceHandler {
 
       return ret;
     }
+    LOG.info("## GMYTIL ## : preStart ready -> No privileged operations needed.");
     return null;
   }
 

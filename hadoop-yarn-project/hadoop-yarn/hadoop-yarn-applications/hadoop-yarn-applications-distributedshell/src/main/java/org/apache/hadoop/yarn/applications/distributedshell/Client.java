@@ -96,6 +96,8 @@ import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.yarn.api.records.ResourceInformation.GPU_URI;
+
 /**
  * Client for Distributed Shell application submission to YARN.
  * 
@@ -675,6 +677,20 @@ public class Client {
       profiles = null;
     }
 
+    ///////////////// GMYTIL code //////////////////
+    if(profiles != null){
+      LOG.info("## GMYTIL ## : profile feature is activated.");
+      for(Map.Entry<String, Resource> e : profiles.entrySet()){
+        ResourceInformation ri = e.getValue().getResourceInformation(e.getKey());
+        LOG.info("## GMYTIL ## : key = "+e.getKey()+" ri.name = "+ri.getName()+" ri.value = "+ri.getValue());
+      }
+    }else{
+      LOG.info("## GMYTIL ## : profile feature is disabled.");
+    }
+    LOG.info("## GMYTIL ## : AM resource profile = "+amResourceProfile);
+    LOG.info("## GMYTIL ## : Containers resource profile = "+containerResourceProfile);
+    ////////////////////////////////////////////////
+
     List<String> appProfiles = new ArrayList<>(2);
     appProfiles.add(amResourceProfile);
     appProfiles.add(containerResourceProfile);
@@ -726,6 +742,12 @@ public class Client {
     // set the application name
     ApplicationSubmissionContext appContext = app.getApplicationSubmissionContext();
     ApplicationId appId = appContext.getApplicationId();
+
+    ////////////////// GMYTIL code ///////////////
+    if(profiles == null || profiles.isEmpty()){
+      LOG.info("## GMYTIL ## : Profiles have not been initialized");
+    }
+    ////////////////// GMYTIL code ///////////////
 
     // Set up resource type requirements
     // For now, both memory and vcores are supported, so we set memory and
@@ -875,6 +897,7 @@ public class Client {
     if (!containerResources.isEmpty()) {
       Joiner.MapJoiner joiner = Joiner.on(',').withKeyValueSeparator("=");
       vargs.add("--container_resources " + joiner.join(containerResources));
+      LOG.info("## GMYTIL ## : Arg passed for container resources: "+ "--container_resources " + joiner.join(containerResources));
     }
     if (containerResourceProfile != null && !containerResourceProfile
         .isEmpty()) {
@@ -1201,8 +1224,14 @@ public class Client {
       throw new IllegalArgumentException("Container vcores '" +
           containerVirtualCores + "' has to be greated than 0");
     }
+    /////////// GMYTIL code //////////////////
+    for(Map.Entry<String, Long> e : containerResources.entrySet()){
+      LOG.info("## GMYTIL ## : Asked for "+e.getValue()+" "+e.getKey());
+    }
+    //////////////////////////////////////////
     validateResourceTypes(containerResources.keySet(), resourceTypes);
     if (profiles == null) {
+      LOG.info("## GMYTIL ## : Profiles are indeed null");
       containerMemory = containerMemory == -1 ?
           DEFAULT_CONTAINER_MEMORY : containerMemory;
       containerVirtualCores = containerVirtualCores == -1 ?
@@ -1212,7 +1241,23 @@ public class Client {
 
   private void validateResourceTypes(Iterable<String> resourceNames,
       List<ResourceTypeInfo> resourceTypes) {
+    ///////////// GMYTIL code ////////////////////
+    LOG.info("## GMYTIL ## : Valid resource types:");
+    int counter = 0;
+    for(ResourceTypeInfo type : resourceTypes){
+      LOG.info("## GMYTIL ## : "+counter+": "+type.getName());
+      counter++;
+    }
+    ///////////// GMYTIL code ////////////////////
     for (String resourceName : resourceNames) {
+//      LOG.info("## GMYTIL ## : Asked for resource "+ resourceName);
+//      if(resourceName.contains(GPU_URI)) {
+//        String[] resourceNameParts = resourceName.split("/");
+//        resourceName = resourceNameParts[0] + "/" + resourceNameParts[1];
+//        LOG.info("## GMYTIL ## : prefixized");
+//      }
+//      String checkedResource = resourceName;
+      LOG.info("## GMYTIL ## : requested resource -> " + resourceName);
       if (!resourceTypes.stream().anyMatch(e ->
           e.getName().equals(resourceName))) {
         throw new ResourceNotFoundException("Unknown resource: " +

@@ -392,6 +392,7 @@ class CGroupsHandlerImpl implements CGroupsHandler {
       throws ResourceHandlerException {
     // Check permissions to cgroup hierarchy and
     // create YARN cgroup if it does not exist, yet
+    LOG.info("## GMYTIL ## : Initialize premounted CGROUPS");
     String controllerPath = getControllerPath(controller);
 
     if (controllerPath == null) {
@@ -464,13 +465,21 @@ class CGroupsHandlerImpl implements CGroupsHandler {
   public String createCGroup(CGroupController controller, String cGroupId)
       throws ResourceHandlerException {
     String path = getPathForCGroup(controller, cGroupId);
+    java.nio.file.Path cgroupPath = Paths.get(path);
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("createCgroup: " + path);
     }
-
-    if (!new File(path).mkdir()) {
-      throw new ResourceHandlerException("Failed to create cgroup at " + path);
+    /////// GMYTIL code ///////////////
+    // check if cgroup exists and try to create it only if it does not.
+    LOG.info("## GMYTIL ## : Check if Cgroup exists.");
+    if(!Files.exists(cgroupPath)) {
+      LOG.info("## GMYTIL ## : Cgroup does not exist. Let's create it");
+      if (!new File(path).mkdir()) {
+        throw new ResourceHandlerException("Failed to create cgroup at " + path);
+      }
+    }else{
+      LOG.info("## GMYTIL ## : Cgroup exists. Do nothing");
     }
 
     return path;

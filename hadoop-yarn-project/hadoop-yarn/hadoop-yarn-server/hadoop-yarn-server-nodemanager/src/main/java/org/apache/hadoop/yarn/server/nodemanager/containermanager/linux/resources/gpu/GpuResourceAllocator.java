@@ -26,7 +26,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -58,9 +57,12 @@ public class GpuResourceAllocator {
   private Set<GpuDevice> allowedGpuDevices = new TreeSet<>();
   private Map<GpuDevice, ContainerId> usedDevices = new TreeMap<>();
   private Context nmContext;
+  private String gpuType;
 
-  public GpuResourceAllocator(Context ctx) {
+  public GpuResourceAllocator(Context ctx, String gpuProductName) {
     this.nmContext = ctx;
+    this.gpuType = GPU_URI + "-" + gpuProductName;
+    LOG.info("## GMYTIL ## : New GpuResourceAllocator created for resource "+ gpuType);
   }
 
   /**
@@ -119,7 +121,7 @@ public class GpuResourceAllocator {
     }
 
     for (Serializable gpuDeviceSerializable : c.getResourceMappings()
-        .getAssignedResources(GPU_URI)) {
+        .getAssignedResources(gpuType)) {
       if (!(gpuDeviceSerializable instanceof GpuDevice)) {
         throw new ResourceHandlerException(
             "Trying to recover device id, however it"
@@ -149,14 +151,18 @@ public class GpuResourceAllocator {
   }
 
   /**
-   * Get number of requested GPUs from resource.
+   * Get number of requested GPUs of specific type from resource.
    * @param requestedResource requested resource
+   * @param gpuType requested gpu type
    * @return #gpus.
    */
-  public static int getRequestedGpus(Resource requestedResource) {
+  public static int getRequestedGpus(Resource requestedResource, String gpuType) {
     try {
-      return Long.valueOf(requestedResource.getResourceValue(
-          GPU_URI)).intValue();
+      if(gpuType == null){
+        // this is in order to pass compile phase in the Docker case
+        gpuType = GPU_URI;
+      }
+      return Long.valueOf(requestedResource.getResourceValue(gpuType)).intValue();
     } catch (ResourceNotFoundException e) {
       return 0;
     }
@@ -209,7 +215,8 @@ public class GpuResourceAllocator {
       throws ResourceHandlerException {
     Resource requestedResource = container.getResource();
     ContainerId containerId = container.getContainerId();
-    int numRequestedGpuDevices = getRequestedGpus(requestedResource);
+    int numRequestedGpuDevices = getRequestedGpus(requestedResource, gpuType);
+    LOG.info("## GMYTIL ## : Container requested "+ numRequestedGpuDevices + " GPU devices.");
     // Assign Gpus to container if requested some.
     if (numRequestedGpuDevices > 0) {
       if (numRequestedGpuDevices > getAvailableGpus()) {
@@ -242,7 +249,7 @@ public class GpuResourceAllocator {
       if (!assignedGpus.isEmpty()) {
         try {
           // Update state store.
-          nmContext.getNMStateStore().storeAssignedResources(container, GPU_URI,
+          nmContext.getNMStateStore().storeAssignedResources(container, gpuType,
               new ArrayList<>(assignedGpus));
         } catch (IOException e) {
           cleanupAssignGpus(containerId);
@@ -266,7 +273,7 @@ public class GpuResourceAllocator {
       if ((container = nmContext.getContainers().get(containerId)) != null) {
         if (container.isContainerInFinalStates()) {
           releasingGpus = releasingGpus + container.getResource()
-              .getResourceInformation(ResourceInformation.GPU_URI).getValue();
+              .getResourceInformation(gpuType).getValue();
         }
       }
     }

@@ -35,13 +35,20 @@ import static org.apache.hadoop.yarn.api.records.ResourceInformation.GPU_URI;
 public class GpuNodeResourceUpdateHandler extends NodeResourceUpdaterPlugin {
   private static final Logger LOG =
       LoggerFactory.getLogger(GpuNodeResourceUpdateHandler.class);
+  private String gpuProductName;
+  private String gpuType;
+
+  public GpuNodeResourceUpdateHandler(String gpuProductName){
+    this.gpuProductName = gpuProductName;
+    this.gpuType = GPU_URI + "-" + gpuProductName;
+  }
 
   @Override
   public void updateConfiguredResource(Resource res) throws YarnException {
     LOG.info("Initializing configured GPU resources for the NodeManager.");
 
     List<GpuDevice> usableGpus =
-        GpuDiscoverer.getInstance().getGpusUsableByYarn();
+        GpuDiscoverer.getInstance().getGpusUsableByYarn(gpuProductName);
     if (null == usableGpus || usableGpus.isEmpty()) {
       String message = "GPU is enabled, but couldn't find any usable GPUs on the "
           + "NodeManager.";
@@ -54,15 +61,23 @@ public class GpuNodeResourceUpdateHandler extends NodeResourceUpdaterPlugin {
 
     Map<String, ResourceInformation> configuredResourceTypes =
         ResourceUtils.getResourceTypes();
-    if (!configuredResourceTypes.containsKey(GPU_URI)) {
+
+    ///////////// GMYTIL code ////////////////////////////
+    LOG.info("## GMYTIL ## : Configured Resource Types:");
+    for(Map.Entry<String, ResourceInformation> e : configuredResourceTypes.entrySet()){
+      LOG.info("## GMYTIL ## : " + e.getKey());
+    }
+    ///////////// GMYTIL code ////////////////////////////
+
+    if (!configuredResourceTypes.containsKey(gpuType)) {
       throw new YarnException("Found " + nUsableGpus + " usable GPUs, however "
-          + GPU_URI
+          + gpuType
           + " resource-type is not configured inside"
           + " resource-types.xml, please configure it to enable GPU feature or"
-          + " remove " + GPU_URI + " from "
+          + " remove " + gpuType + " from "
           + YarnConfiguration.NM_RESOURCE_PLUGINS);
     }
 
-    res.setResourceValue(GPU_URI, nUsableGpus);
+    res.setResourceValue(gpuType, nUsableGpus);
   }
 }

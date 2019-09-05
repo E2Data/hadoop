@@ -60,7 +60,15 @@ public class ResourcePluginManager {
       // Initialize each plugins
       for (String resourceName : plugins) {
         resourceName = resourceName.trim();
-        if (!SUPPORTED_RESOURCE_PLUGINS.contains(resourceName)) {
+        LOG.info("## GMYTIL ## : RESOURCE PLUGIN: "+resourceName);
+        boolean validResource = false;
+        for(String resourcePluginPrefix : SUPPORTED_RESOURCE_PLUGINS){
+          if(resourceName.contains(resourcePluginPrefix)){
+            validResource = true;
+            break;
+          }
+        }
+        if (!validResource) {
           String msg =
               "Trying to initialize resource plugin with name=" + resourceName
                   + ", it is not supported, list of supported plugins:"
@@ -76,8 +84,13 @@ public class ResourcePluginManager {
         }
 
         ResourcePlugin plugin = null;
-        if (resourceName.equals(GPU_URI)) {
-          plugin = new GpuResourcePlugin();
+
+        if (resourceName.contains(GPU_URI)) {
+          // extract gpu product name from resourceName
+          // resourceName is of the form yarn.io/gpu-geforcegtx10606gb
+          // productName is geforcegtx10606gb
+          String productName = resourceName.split("-")[1];
+          plugin = new GpuResourcePlugin(productName);
         }
 
         if (resourceName.equals(FPGA_URI)) {

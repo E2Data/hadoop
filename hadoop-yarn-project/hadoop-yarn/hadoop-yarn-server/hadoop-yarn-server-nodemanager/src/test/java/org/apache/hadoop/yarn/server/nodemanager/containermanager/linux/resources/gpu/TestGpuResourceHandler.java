@@ -86,7 +86,7 @@ public class TestGpuResourceHandler {
     when(nmctx.getContainers()).thenReturn(runningContainersMap);
 
     gpuResourceHandler = new GpuResourceHandlerImpl(nmctx, mockCGroupsHandler,
-        mockPrivilegedExecutor);
+        mockPrivilegedExecutor, null);
   }
 
   @Test
@@ -352,7 +352,7 @@ public class TestGpuResourceHandler {
 
     GpuResourceHandlerImpl gpuNULLStateResourceHandler =
         new GpuResourceHandlerImpl(nmnctx, mockCGroupsHandler,
-        mockPrivilegedExecutor);
+        mockPrivilegedExecutor, null);
 
     Configuration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0,1:1,2:3,3:4");

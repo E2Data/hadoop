@@ -43,6 +43,8 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
   public static final String VCORES_URI = "vcores";
   public static final String GPU_URI = "yarn.io/gpu";
   public static final String FPGA_URI = "yarn.io/fpga";
+  public static final String GTX_GPU_URI = GPU_URI + "-geforcegtx10606gb";
+  public static final String TESLA_GPU_URI = GPU_URI + "-teslav100sxm232gb";
 
   public static final ResourceInformation MEMORY_MB =
       ResourceInformation.newInstance(MEMORY_URI, "Mi");
@@ -50,11 +52,17 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
       ResourceInformation.newInstance(VCORES_URI);
   public static final ResourceInformation GPUS =
       ResourceInformation.newInstance(GPU_URI);
+  public static final ResourceInformation GTX_GPUS =
+          ResourceInformation.newInstance(GTX_GPU_URI);
+  public static final ResourceInformation TESLA_GPUS =
+          ResourceInformation.newInstance(TESLA_GPU_URI);
   public static final ResourceInformation FPGAS =
           ResourceInformation.newInstance(FPGA_URI);
-
+  //TODO: should have a more generic solution for this and support arbitrarily many resource types
   public static final Map<String, ResourceInformation> MANDATORY_RESOURCES =
-      ImmutableMap.of(MEMORY_URI, MEMORY_MB, VCORES_URI, VCORES, GPU_URI, GPUS, FPGA_URI, FPGAS);
+          ImmutableMap.of(MEMORY_URI, MEMORY_MB, VCORES_URI, VCORES, GPU_URI, GPUS, GTX_GPU_URI, GTX_GPUS, TESLA_GPU_URI, TESLA_GPUS);
+      //ImmutableMap.of(MEMORY_URI, MEMORY_MB, VCORES_URI, VCORES, GPU_URI, GPUS, GTX_GPU_URI, GTX_GPUS, TESLA_GPU_URI, TESLA_GPUS, FPGA_URI, FPGAS);
+
 
   /**
    * Get the name for the resource.
