@@ -25,20 +25,32 @@ import java.io.Serializable;
  */
 public class GpuDevice implements Serializable, Comparable {
   protected int index;
-  protected int minorNumber;
+  protected int platformId;
+  protected int deviceId;
   private static final long serialVersionUID = -6812314470754667710L;
 
-  public GpuDevice(int index, int minorNumber) {
+  public GpuDevice(int index, int pid, int did) {
     this.index = index;
-    this.minorNumber = minorNumber;
+    this.platformId = pid;
+    this.deviceId = did;
   }
 
   public int getIndex() {
     return index;
   }
 
+  public int getPlatformId() {
+    return platformId;
+  }
+
+  public int getDeviceId() {
+    return deviceId;
+  }
+
+  /** SNIARCHOS **/
+  // workaround, to pass the diagnostics
   public int getMinorNumber() {
-    return minorNumber;
+    return getDeviceId();
   }
 
   @Override
@@ -47,7 +59,7 @@ public class GpuDevice implements Serializable, Comparable {
       return false;
     }
     GpuDevice other = (GpuDevice) obj;
-    return index == other.index && minorNumber == other.minorNumber;
+    return index == other.index && platformId == other.platformId && deviceId == other.deviceId;
   }
 
   @Override
@@ -62,17 +74,21 @@ public class GpuDevice implements Serializable, Comparable {
     if (0 != result) {
       return result;
     }
-    return Integer.compare(minorNumber, other.minorNumber);
+    result = Integer.compare(platformId, other.platformId);
+    if (0 != result) {
+      return result;
+    }
+    return Integer.compare(deviceId, other.deviceId);
   }
 
   @Override
   public int hashCode() {
     final int prime = 47;
-    return prime * index + minorNumber;
+    return prime * index + deviceId;
   }
 
   @Override
   public String toString() {
-    return "(index=" + index + ",minor_number=" + minorNumber + ")";
+    return "(index=" + index + ",platform_id=" + platformId + ",device_id=" + deviceId + ")";
   }
 }

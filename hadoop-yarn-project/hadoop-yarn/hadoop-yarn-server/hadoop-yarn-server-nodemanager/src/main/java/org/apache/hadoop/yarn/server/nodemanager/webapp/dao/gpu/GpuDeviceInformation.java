@@ -29,11 +29,15 @@ import java.util.List;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-@XmlRootElement(name = "nvidia_smi_log")
+@XmlRootElement(name = "gpus")
 public class GpuDeviceInformation {
   List<PerGpuDeviceInformation> gpus;
 
   String driverVersion = "N/A";
+
+  public GpuDeviceInformation(List<PerGpuDeviceInformation> gpus) {
+    setGpus(gpus);
+  }
 
   // More fields like topology information could be added when needed.
   // ...
@@ -47,20 +51,10 @@ public class GpuDeviceInformation {
     this.gpus = gpus;
   }
 
-  @javax.xml.bind.annotation.XmlElement(name = "driver_version")
-  public String getDriverVersion() {
-    return driverVersion;
-  }
-
-  public void setDriverVersion(String driverVersion) {
-    this.driverVersion = driverVersion;
-  }
-
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("=== Gpus in the system ===\n").append("\tDriver Version:").append(
-        getDriverVersion()).append("\n");
+    sb.append("=== Gpus in the system ===\n\t");
 
     if (gpus != null) {
       for (PerGpuDeviceInformation gpu : gpus) {

@@ -125,6 +125,15 @@
       <groupId>io.dropwizard.metrics</groupId>
       <artifactId>metrics-core</artifactId>
     </dependency>
+
+    <!-- Will be using JavaCL for (OpenCL enabled) GPU discovery -->
+    <!-- NOTE: Could it be used for OpenCL devices of other types as well? (CPU, FPGA, etc) -->
+    <dependency>
+      <groupId>com.nativelibs4java</groupId>
+      <artifactId>javacl</artifactId>
+      <version>1.0.0-RC4</version>
+    </dependency>
+
     <!--
     junit must be before mockito-all on the classpath.  mockito-all bundles its
     own copy of the hamcrest classes, but they don't match our junit version.
@@ -383,6 +392,21 @@
           </execution>
         </executions>
       </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.2.4</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
     </plugins>
   </build>
 </project>

@@ -18,23 +18,21 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.OpenCLDevice;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.GpuDeviceInformation;
-import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.GpuDeviceInformationParser;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.PerGpuDeviceInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
+// OpenCL-enabled GPU discovery utility
+import com.nativelibs4java.opencl.*;
+import static com.nativelibs4java.opencl.library.OpenCLLibrary.*;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -46,18 +44,7 @@ import java.util.Set;
 public class GpuDiscoverer {
   public static final Logger LOG = LoggerFactory.getLogger(
       GpuDiscoverer.class);
-  @VisibleForTesting
-  protected static final String DEFAULT_BINARY_NAME = "nvidia-smi";
 
-  // When executable path not set, try to search default dirs
-  // By default search /usr/bin, /bin, and /usr/local/nvidia/bin (when
-  // launched by nvidia-docker.
-  private static final Set<String> DEFAULT_BINARY_SEARCH_DIRS = ImmutableSet.of(
-      "/usr/bin", "/bin", "/usr/local/nvidia/bin");
-
-  // command should not run more than 10 sec.
-  private static final int MAX_EXEC_TIMEOUT_MS = 10 * 1000;
-  private static final int MAX_REPEATED_ERROR_ALLOWED = 10;
   private static GpuDiscoverer instance;
 
   static {
@@ -65,9 +52,6 @@ public class GpuDiscoverer {
   }
 
   private Configuration conf = null;
-  private String pathOfGpuBinary = null;
-  private Map<String, String> environment = new HashMap<>();
-  private GpuDeviceInformationParser parser = new GpuDeviceInformationParser();
 
   private int numOfErrorExecutionSinceLastSucceed = 0;
   GpuDeviceInformation lastDiscoveredGpuInformation = null;
@@ -81,58 +65,35 @@ public class GpuDiscoverer {
 
   /**
    * Get GPU device information from system.
-   * This need to be called after initialize.
    *
    * Please note that this only works on *NIX platform, so external caller
    * need to make sure this.
    *
+   * @param productCanonicalName the name of the GPU(s) to look for
    * @return GpuDeviceInformation
    * @throws YarnException when any error happens
    */
-  public synchronized GpuDeviceInformation getGpuDeviceInformation()
+  public synchronized GpuDeviceInformation getGpuDeviceInformation(String productCanonicalName)
       throws YarnException {
     validateConfOrThrowException();
+    
+    List<OpenCLDevice> OpenCLGpus =
+        this.getOpenCLEnabledGpus(productCanonicalName);
 
-    if (null == pathOfGpuBinary) {
-      throw new YarnException(
-          "Failed to find GPU discovery executable, please double check "
-              + YarnConfiguration.NM_GPU_PATH_TO_EXEC + " setting.");
+    List<PerGpuDeviceInformation> gpus = new ArrayList<PerGpuDeviceInformation>();
+
+    for (OpenCLDevice device : OpenCLGpus) {
+      gpus.add(new PerGpuDeviceInformation(
+        productCanonicalName,
+        device.getPlatformId(),
+        device.getDeviceId(),
+        device.getDevice().getGlobalMemSize()
+      ));
     }
 
-    if (numOfErrorExecutionSinceLastSucceed == MAX_REPEATED_ERROR_ALLOWED) {
-      String msg =
-          "Failed to execute GPU device information detection script for "
-              + MAX_REPEATED_ERROR_ALLOWED
-              + " times, skip following executions.";
-      LOG.error(msg);
-      throw new YarnException(msg);
-    }
+    lastDiscoveredGpuInformation = new GpuDeviceInformation(gpus);
+    return lastDiscoveredGpuInformation;
 
-    String output;
-    try {
-      output = Shell.execCommand(environment,
-          new String[] { pathOfGpuBinary, "-x", "-q" }, MAX_EXEC_TIMEOUT_MS);
-      GpuDeviceInformation info = parser.parseXml(output);
-      numOfErrorExecutionSinceLastSucceed = 0;
-      lastDiscoveredGpuInformation = info;
-      return info;
-    } catch (IOException e) {
-      numOfErrorExecutionSinceLastSucceed++;
-      String msg =
-          "Failed to execute " + pathOfGpuBinary + " exception message:" + e
-              .getMessage() + ", continue ...";
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(msg);
-      }
-      throw new YarnException(e);
-    } catch (YarnException e) {
-      numOfErrorExecutionSinceLastSucceed++;
-      String msg = "Failed to parse xml output" + e.getMessage();
-      if (LOG.isDebugEnabled()) {
-        LOG.warn(msg, e);
-      }
-      throw e;
-    }
   }
 
   /**
@@ -171,9 +132,11 @@ public class GpuDiscoverer {
              i++) {
           List<PerGpuDeviceInformation> gpuInfos =
               lastDiscoveredGpuInformation.getGpus();
-          String canonicalGpuProductName = canonicalProductName(gpuInfos.get(i).getProductName());
+          String canonicalGpuProductNameWithPandD = canonicalProductName(gpuInfos.get(i).getProductName());
+          String canonicalGpuProductName = canonicalGpuProductNameWithPandD.split("_")[0];
+          // LOG.info("## SNIARCHOS ## : FilterName=" + filterName + ", CanonicalProductName=" + canonicalGpuProductName);
           if((filterName == null) || ((filterName != null) && (canonicalGpuProductName.equals(filterName)))) {
-            gpuDevices.add(new GpuDevice(i, gpuInfos.get(i).getMinorNumber()));
+            gpuDevices.add(new GpuDevice(i, gpuInfos.get(i).getPlatformId(), gpuInfos.get(i).getDeviceId()));
           }
         }
       }
@@ -182,14 +145,14 @@ public class GpuDiscoverer {
       for (String s : allowedDevicesStr.split(",")) {
         if (s.trim().length() > 0) {
           String[] kv = s.trim().split(":");
-          if (kv.length != 2) {
+          if (kv.length != 3) {
             throw new YarnException(
-                "Illegal format, it should be index:minor_number format, now it="
+                "Illegal format, it should be index:platform_id:device_id format, now it="
                     + s);
           }
 
           gpuDevices.add(
-              new GpuDevice(Integer.parseInt(kv[0]), Integer.parseInt(kv[1])));
+              new GpuDevice(Integer.parseInt(kv[0]), Integer.parseInt(kv[1]), Integer.parseInt(kv[2])));
         }
       }
       LOG.info("Allowed GPU devices:" + gpuDevices);
@@ -204,56 +167,17 @@ public class GpuDiscoverer {
    * @param productName Product name of a GPU device as extracted by the nvidia-smi utility
    * @return Product name in normalized form
    */
-  public String canonicalProductName(String productName){
+  public static String canonicalProductName(String productName){
 
     return productName.replaceAll(" ", "").replaceAll("-","").toLowerCase();
   }
 
-  public synchronized void initialize(Configuration conf) throws YarnException {
+  public synchronized void initialize(Configuration conf, String productCanonicalName) {
     this.conf = conf;
-    numOfErrorExecutionSinceLastSucceed = 0;
-    String pathToExecutable = conf.get(YarnConfiguration.NM_GPU_PATH_TO_EXEC,
-        YarnConfiguration.DEFAULT_NM_GPU_PATH_TO_EXEC);
-    if (pathToExecutable.isEmpty()) {
-      pathToExecutable = DEFAULT_BINARY_NAME;
-    }
-
-    // Validate file existence
-    File binaryPath = new File(pathToExecutable);
-
-    if (!binaryPath.exists()) {
-      // When binary not exist, use default setting.
-      boolean found = false;
-      for (String dir : DEFAULT_BINARY_SEARCH_DIRS) {
-        binaryPath = new File(dir, DEFAULT_BINARY_NAME);
-        if (binaryPath.exists()) {
-          found = true;
-          pathOfGpuBinary = binaryPath.getAbsolutePath();
-          break;
-        }
-      }
-
-      if (!found) {
-        LOG.warn("Failed to locate binary at:" + binaryPath.getAbsolutePath()
-            + ", please double check [" + YarnConfiguration.NM_GPU_PATH_TO_EXEC
-            + "] setting. Now use " + "default binary:" + DEFAULT_BINARY_NAME);
-      }
-    } else{
-      // If path specified by user is a directory, use
-      if (binaryPath.isDirectory()) {
-        binaryPath = new File(binaryPath, DEFAULT_BINARY_NAME);
-        LOG.warn("Specified path is a directory, use " + DEFAULT_BINARY_NAME
-            + " under the directory, updated path-to-executable:" + binaryPath
-            .getAbsolutePath());
-      }
-      // Validated
-      pathOfGpuBinary = binaryPath.getAbsolutePath();
-    }
-
     // Try to discover GPU information once and print
     try {
       LOG.info("Trying to discover GPU information ...");
-      GpuDeviceInformation info = getGpuDeviceInformation();
+      GpuDeviceInformation info = getGpuDeviceInformation(productCanonicalName);
       LOG.info(info.toString());
     } catch (YarnException e) {
       String msg =
@@ -263,14 +187,42 @@ public class GpuDiscoverer {
     }
   }
 
-  @VisibleForTesting
-  protected Map<String, String> getEnvironmentToRunCommand() {
-    return environment;
-  }
+  /**
+   * Retrieves the list of all OpenCL-enabled devices that correspond
+   * to the provided (canonical) product name
+   *
+   * @param providedDeviceCanonicalName Canonical product name of interest
+   * @param type The type of device (CLDevice.Type.{GPU,Accelerator})
+   * @return list of CLDevice objects
+   */
+  private List<OpenCLDevice> getOpenCLEnabledGpus(String productCanonicalName)
+  throws YarnException {
 
-  @VisibleForTesting
-  protected String getPathOfGpuBinary() {
-    return pathOfGpuBinary;
+    List<OpenCLDevice> requestedDevices = new ArrayList<OpenCLDevice>();
+
+    CLPlatform[] platforms = JavaCL.listPlatforms();
+
+    for (int pid = 0; pid < platforms.length; pid++) {
+      try {
+        CLPlatform platform = platforms[pid];
+        CLDevice[] devices = platform.listDevices(CLDevice.Type.GPU, false);
+        for (int did = 0; did < devices.length; did++) {
+          CLDevice device = devices[did];
+          String deviceName = device.getName();
+          String deviceCanonicalName = GpuDiscoverer.canonicalProductName(deviceName);
+          if (deviceCanonicalName.equals(productCanonicalName)) {
+            requestedDevices.add(new OpenCLDevice(device, pid, did));
+          }
+        }
+      } catch (CLException e) {
+        if (e.getCode() == CL_DEVICE_NOT_FOUND)
+          continue;
+        throw new YarnException("Unexpected OpenCL error", e);
+      }
+    }
+
+    return requestedDevices;
+
   }
 
   public static GpuDiscoverer getInstance() {

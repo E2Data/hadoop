@@ -49,7 +49,7 @@ public class GpuResourcePlugin implements ResourcePlugin {
   @Override
   public synchronized void initialize(Context context) throws YarnException {
     resourceDiscoverHandler = new GpuNodeResourceUpdateHandler(gpuProductName);
-    GpuDiscoverer.getInstance().initialize(context.getConf());
+    GpuDiscoverer.getInstance().initialize(context.getConf(), gpuProductName);
     dockerCommandPlugin =
         GpuDockerCommandPluginFactory.createGpuDockerCommandPlugin(
             context.getConf());
@@ -84,7 +84,7 @@ public class GpuResourcePlugin implements ResourcePlugin {
   @Override
   public NMResourceInfo getNMResourceInfo() throws YarnException {
     GpuDeviceInformation gpuDeviceInformation =
-        GpuDiscoverer.getInstance().getGpuDeviceInformation();
+        GpuDiscoverer.getInstance().getGpuDeviceInformation(this.gpuProductName);
     GpuResourceAllocator gpuResourceAllocator =
         gpuResourceHandler.getGpuAllocator();
     List<GpuDevice> totalGpus = gpuResourceAllocator.getAllowedGpusCopy();
