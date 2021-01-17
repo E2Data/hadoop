@@ -57,36 +57,42 @@ public class TestGpuDiscoverer {
     Assume.assumeTrue(Boolean.valueOf(
         System.getProperty("RunLinuxGpuResourceDiscoverPluginConfigTest")));
 
+    /** SNIARCOS **/
+    /* this test is useless now (nvidia-smi has been removed) */
     // test case 1, check default setting.
-    Configuration conf = new Configuration(false);
-    GpuDiscoverer plugin = new GpuDiscoverer();
-    plugin.initialize(conf);
-    Assert.assertEquals(GpuDiscoverer.DEFAULT_BINARY_NAME,
-        plugin.getPathOfGpuBinary());
-    Assert.assertNotNull(plugin.getEnvironmentToRunCommand().get("PATH"));
-    Assert.assertTrue(
-        plugin.getEnvironmentToRunCommand().get("PATH").contains("nvidia"));
+    // Configuration conf = new Configuration(false);
+    // GpuDiscoverer plugin = new GpuDiscoverer();
+    // plugin.initialize(conf);
+    // Assert.assertEquals(GpuDiscoverer.DEFAULT_BINARY_NAME,
+    //     plugin.getPathOfGpuBinary());
+    // Assert.assertNotNull(plugin.getEnvironmentToRunCommand().get("PATH"));
+    // Assert.assertTrue(
+    //    plugin.getEnvironmentToRunCommand().get("PATH").contains("nvidia"));
 
+    /** SNIARCHOS **/
+    /* this test is useless now (nvidia-smi has been removed) */
     // test case 2, check mandatory set path.
-    File fakeBinary = new File(getTestParentFolder(),
-        GpuDiscoverer.DEFAULT_BINARY_NAME);
-    touchFile(fakeBinary);
-    conf.set(YarnConfiguration.NM_GPU_PATH_TO_EXEC, getTestParentFolder());
-    plugin = new GpuDiscoverer();
-    plugin.initialize(conf);
-    Assert.assertEquals(fakeBinary.getAbsolutePath(),
-        plugin.getPathOfGpuBinary());
-    Assert.assertNull(plugin.getEnvironmentToRunCommand().get("PATH"));
+    // File fakeBinary = new File(getTestParentFolder(),
+    //     GpuDiscoverer.DEFAULT_BINARY_NAME);
+    // touchFile(fakeBinary);
+    // conf.set(YarnConfiguration.NM_GPU_PATH_TO_EXEC, getTestParentFolder());
+    // plugin = new GpuDiscoverer();
+    // plugin.initialize(conf);
+    // Assert.assertEquals(fakeBinary.getAbsolutePath(),
+    //     plugin.getPathOfGpuBinary());
+    // Assert.assertNull(plugin.getEnvironmentToRunCommand().get("PATH"));
 
+    /** SNIARCHOS **/
+    /* this test is useless now (nvidia-smi has been removed) */
     // test case 3, check mandatory set path, but binary doesn't exist so default
     // path will be used.
-    fakeBinary.delete();
-    plugin = new GpuDiscoverer();
-    plugin.initialize(conf);
-    Assert.assertEquals(GpuDiscoverer.DEFAULT_BINARY_NAME,
-        plugin.getPathOfGpuBinary());
-    Assert.assertTrue(
-        plugin.getEnvironmentToRunCommand().get("PATH").contains("nvidia"));
+    // fakeBinary.delete();
+    // plugin = new GpuDiscoverer();
+    // plugin.initialize(conf);
+    // Assert.assertEquals(GpuDiscoverer.DEFAULT_BINARY_NAME,
+    //     plugin.getPathOfGpuBinary());
+    // Assert.assertTrue(
+    //     plugin.getEnvironmentToRunCommand().get("PATH").contains("nvidia"));
   }
 
   @Test
@@ -97,8 +103,8 @@ public class TestGpuDiscoverer {
         Boolean.valueOf(System.getProperty("runGpuDiscoverUnitTest")));
     Configuration conf = new Configuration(false);
     GpuDiscoverer plugin = new GpuDiscoverer();
-    plugin.initialize(conf);
-    GpuDeviceInformation info = plugin.getGpuDeviceInformation();
+    plugin.initialize(conf, null);
+    GpuDeviceInformation info = plugin.getGpuDeviceInformation(null);
 
     Assert.assertTrue(info.getGpus().size() > 0);
     Assert.assertEquals(plugin.getGpusUsableByYarn(null).size(),
@@ -113,7 +119,7 @@ public class TestGpuDiscoverer {
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0,1:1,2:2,3");
     GpuDiscoverer plugin = new GpuDiscoverer();
     try {
-      plugin.initialize(conf);
+      plugin.initialize(conf, null);
       plugin.getGpusUsableByYarn(null);
       Assert.fail("Illegal format, should fail.");
     } catch (YarnException e) {
@@ -123,7 +129,7 @@ public class TestGpuDiscoverer {
     // Valid format
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0,1:1,2:2,3:4");
     plugin = new GpuDiscoverer();
-    plugin.initialize(conf);
+    plugin.initialize(conf, null);
 
     List<GpuDevice> usableGpuDevices = plugin.getGpusUsableByYarn(null);
     Assert.assertEquals(4, usableGpuDevices.size());

@@ -29,22 +29,24 @@ import java.io.IOException;
 public class TestGpuDeviceInformationParser {
   @Test
   public void testParse() throws IOException, YarnException {
+    /** SNIARCHOS **/
+    /* most of this test is unusable now, due to our mitigation to OpenCL API */
     File f = new File("src/test/resources/nvidia-smi-sample-xml-output");
     String s = FileUtils.readFileToString(f, "UTF-8");
 
     GpuDeviceInformationParser parser = new GpuDeviceInformationParser();
 
     GpuDeviceInformation info = parser.parseXml(s);
-    Assert.assertEquals("375.66", info.getDriverVersion());
+    // Assert.assertEquals("375.66", info.getDriverVersion());
     Assert.assertEquals(2, info.getGpus().size());
     PerGpuDeviceInformation gpu1 = info.getGpus().get(1);
     Assert.assertEquals("Tesla P100-PCIE-12GB", gpu1.getProductName());
-    Assert.assertEquals(12193, gpu1.getGpuMemoryUsage().getTotalMemoryMiB());
-    Assert.assertEquals(10.3f,
-        gpu1.getGpuUtilizations().getOverallGpuUtilization(), 1e-6);
-    Assert.assertEquals(34f, gpu1.getTemperature().getCurrentGpuTemp(), 1e-6);
-    Assert.assertEquals(85f, gpu1.getTemperature().getMaxGpuTemp(), 1e-6);
-    Assert.assertEquals(82f, gpu1.getTemperature().getSlowThresholdGpuTemp(),
-        1e-6);
+    // Assert.assertEquals(12193, gpu1.getGpuMemoryUsage().getTotalMemoryMiB());
+    // Assert.assertEquals(10.3f,
+    //     gpu1.getGpuUtilizations().getOverallGpuUtilization(), 1e-6);
+    // Assert.assertEquals(34f, gpu1.getTemperature().getCurrentGpuTemp(), 1e-6);
+    // Assert.assertEquals(85f, gpu1.getTemperature().getMaxGpuTemp(), 1e-6);
+    // Assert.assertEquals(82f, gpu1.getTemperature().getSlowThresholdGpuTemp(),
+    //     1e-6);
   }
 }

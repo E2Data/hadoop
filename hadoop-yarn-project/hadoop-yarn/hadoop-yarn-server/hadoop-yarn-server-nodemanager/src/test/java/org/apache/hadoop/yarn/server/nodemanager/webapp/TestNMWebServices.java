@@ -502,14 +502,16 @@ public class TestNMWebServices extends JerseyTestBase {
     ResourcePluginManager rpm = mock(ResourcePluginManager.class);
     Map<String, ResourcePlugin> namesToPlugins = new HashMap<>();
     ResourcePlugin mockPlugin1 = mock(ResourcePlugin.class);
-    GpuDeviceInformation gpuDeviceInformation = new GpuDeviceInformation();
-    gpuDeviceInformation.setDriverVersion("1.2.3");
+    GpuDeviceInformation gpuDeviceInformation = new GpuDeviceInformation(null);
+    /** SNIARCHOS **/
+    /* no driver versions anymore -> mitigated to OpenCL API */
+    // gpuDeviceInformation.setDriverVersion("1.2.3");
     gpuDeviceInformation.setGpus(Arrays.asList(new PerGpuDeviceInformation()));
     NMResourceInfo nmResourceInfo1 = new NMGpuResourceInfo(gpuDeviceInformation,
-        Arrays.asList(new GpuDevice(1, 1), new GpuDevice(2, 2),
-            new GpuDevice(3, 3)), Arrays
-        .asList(new AssignedGpuDevice(2, 2, createContainerId(1)),
-            new AssignedGpuDevice(3, 3, createContainerId(2))));
+        Arrays.asList(new GpuDevice(1, 0, 1), new GpuDevice(2, 0, 2),
+            new GpuDevice(3, 0, 3)), Arrays
+        .asList(new AssignedGpuDevice(2, 0, 2, createContainerId(1)),
+            new AssignedGpuDevice(3, 0, 3, createContainerId(2))));
     when(mockPlugin1.getNMResourceInfo()).thenReturn(nmResourceInfo1);
     namesToPlugins.put("resource-1", mockPlugin1);
     namesToPlugins.put("yarn.io/resource-1", mockPlugin1);

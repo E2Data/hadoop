@@ -94,7 +94,7 @@ public class TestGpuResourceHandler {
     Configuration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0");
 
-    GpuDiscoverer.getInstance().initialize(conf);
+    GpuDiscoverer.getInstance().initialize(conf, null);
 
     gpuResourceHandler.bootstrap(conf);
     verify(mockCGroupsHandler, times(1)).initializeCGroupController(
@@ -157,7 +157,7 @@ public class TestGpuResourceHandler {
       throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0,1:1,2:3,3:4");
-    GpuDiscoverer.getInstance().initialize(conf);
+    GpuDiscoverer.getInstance().initialize(conf, null);
 
     gpuResourceHandler.bootstrap(conf);
     Assert.assertEquals(4,
@@ -171,7 +171,7 @@ public class TestGpuResourceHandler {
     if (dockerContainerEnabled) {
       verifyDeniedDevices(getContainerId(1), Collections.emptyList());
     } else{
-      verifyDeniedDevices(getContainerId(1), Arrays.asList(new GpuDevice(3,4)));
+      verifyDeniedDevices(getContainerId(1), Arrays.asList(new GpuDevice(3,0,0)));
     }
 
     /* Start container 2, asks 2 containers. Excepted to fail */
@@ -193,8 +193,8 @@ public class TestGpuResourceHandler {
       verifyDeniedDevices(getContainerId(3), Collections.emptyList());
     } else {
       verifyDeniedDevices(getContainerId(3), Arrays
-          .asList(new GpuDevice(0, 0), new GpuDevice(1, 1),
-              new GpuDevice(2, 3)));
+          .asList(new GpuDevice(0, 0, 0), new GpuDevice(1, 0, 1),
+              new GpuDevice(2, 0, 2)));
     }
 
 
@@ -207,8 +207,8 @@ public class TestGpuResourceHandler {
     } else{
       // All devices will be blocked
       verifyDeniedDevices(getContainerId(4), Arrays
-          .asList(new GpuDevice(0, 0), new GpuDevice(1, 1), new GpuDevice(2, 3),
-              new GpuDevice(3, 4)));
+          .asList(new GpuDevice(0, 0, 0), new GpuDevice(1, 0, 1), new GpuDevice(2, 0, 2),
+              new GpuDevice(3, 0, 3)));
     }
 
     /* Release container-1, expect cgroups deleted */
@@ -246,7 +246,7 @@ public class TestGpuResourceHandler {
       throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0,1:1,2:3,3:4");
-    GpuDiscoverer.getInstance().initialize(conf);
+    GpuDiscoverer.getInstance().initialize(conf, null);
 
     gpuResourceHandler.bootstrap(conf);
     Assert.assertEquals(4,
@@ -275,7 +275,7 @@ public class TestGpuResourceHandler {
   public void testAllocationWithoutAllowedGpus() throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, " ");
-    GpuDiscoverer.getInstance().initialize(conf);
+    GpuDiscoverer.getInstance().initialize(conf, null);
 
     try {
       gpuResourceHandler.bootstrap(conf);
@@ -310,7 +310,7 @@ public class TestGpuResourceHandler {
   public void testAllocationStored() throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0,1:1,2:3,3:4");
-    GpuDiscoverer.getInstance().initialize(conf);
+    GpuDiscoverer.getInstance().initialize(conf, null);
 
     gpuResourceHandler.bootstrap(conf);
     Assert.assertEquals(4,
@@ -322,19 +322,19 @@ public class TestGpuResourceHandler {
 
     verify(mockNMStateStore).storeAssignedResources(container,
         ResourceInformation.GPU_URI, Arrays
-            .asList(new GpuDevice(0, 0), new GpuDevice(1, 1),
-                new GpuDevice(2, 3)));
+            .asList(new GpuDevice(0, 0, 0), new GpuDevice(1, 0, 1),
+                new GpuDevice(2, 0, 3)));
 
     // Only device=4 will be blocked.
-    verifyDeniedDevices(getContainerId(1), Arrays.asList(new GpuDevice(3, 4)));
+    verifyDeniedDevices(getContainerId(1), Arrays.asList(new GpuDevice(3, 0, 4)));
 
     /* Start container 2, ask 0 container, succeeded */
     container = mockContainerWithGpuRequest(2, 0);
     gpuResourceHandler.preStart(container);
 
     verifyDeniedDevices(getContainerId(2), Arrays
-        .asList(new GpuDevice(0, 0), new GpuDevice(1, 1), new GpuDevice(2, 3),
-            new GpuDevice(3, 4)));
+        .asList(new GpuDevice(0, 0, 0), new GpuDevice(1, 0, 1), new GpuDevice(2, 0, 3),
+            new GpuDevice(3, 0, 4)));
     Assert.assertEquals(0, container.getResourceMappings()
         .getAssignedResources(ResourceInformation.GPU_URI).size());
 
@@ -356,7 +356,7 @@ public class TestGpuResourceHandler {
 
     Configuration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0,1:1,2:3,3:4");
-    GpuDiscoverer.getInstance().initialize(conf);
+    GpuDiscoverer.getInstance().initialize(conf, null);
 
     gpuNULLStateResourceHandler.bootstrap(conf);
     Assert.assertEquals(4,
@@ -368,15 +368,15 @@ public class TestGpuResourceHandler {
 
     verify(nmnctx.getNMStateStore()).storeAssignedResources(container,
         ResourceInformation.GPU_URI, Arrays
-            .asList(new GpuDevice(0, 0), new GpuDevice(1, 1),
-                new GpuDevice(2, 3)));
+            .asList(new GpuDevice(0, 0, 0), new GpuDevice(1, 0, 1),
+                new GpuDevice(2, 0, 3)));
   }
 
   @Test
   public void testRecoverResourceAllocation() throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0,1:1,2:3,3:4");
-    GpuDiscoverer.getInstance().initialize(conf);
+    GpuDiscoverer.getInstance().initialize(conf, null);
 
     gpuResourceHandler.bootstrap(conf);
     Assert.assertEquals(4,
@@ -387,7 +387,7 @@ public class TestGpuResourceHandler {
     ResourceMappings.AssignedResources ar =
         new ResourceMappings.AssignedResources();
     ar.updateAssignedResources(
-        Arrays.asList(new GpuDevice(1, 1), new GpuDevice(2, 3)));
+        Arrays.asList(new GpuDevice(1, 0, 1), new GpuDevice(2, 0, 3)));
     rmap.addAssignedResources(ResourceInformation.GPU_URI, ar);
     when(nmContainer.getResourceMappings()).thenReturn(rmap);
 
@@ -401,10 +401,10 @@ public class TestGpuResourceHandler {
         gpuResourceHandler.getGpuAllocator().getDeviceAllocationMappingCopy();
     Assert.assertEquals(2, deviceAllocationMapping.size());
     Assert.assertTrue(
-        deviceAllocationMapping.keySet().contains(new GpuDevice(1, 1)));
+        deviceAllocationMapping.keySet().contains(new GpuDevice(1, 0, 1)));
     Assert.assertTrue(
-        deviceAllocationMapping.keySet().contains(new GpuDevice(2, 3)));
-    Assert.assertEquals(deviceAllocationMapping.get(new GpuDevice(1, 1)),
+        deviceAllocationMapping.keySet().contains(new GpuDevice(2, 0, 3)));
+    Assert.assertEquals(deviceAllocationMapping.get(new GpuDevice(1, 0, 1)),
         getContainerId(1));
 
     // TEST CASE
@@ -414,7 +414,7 @@ public class TestGpuResourceHandler {
     ar = new ResourceMappings.AssignedResources();
     // id=5 is not in allowed list.
     ar.updateAssignedResources(
-        Arrays.asList(new GpuDevice(3, 4), new GpuDevice(4, 5)));
+        Arrays.asList(new GpuDevice(3, 0, 4), new GpuDevice(4, 0, 5)));
     rmap.addAssignedResources(ResourceInformation.GPU_URI, ar);
     when(nmContainer.getResourceMappings()).thenReturn(rmap);
 
@@ -435,8 +435,8 @@ public class TestGpuResourceHandler {
         gpuResourceHandler.getGpuAllocator().getDeviceAllocationMappingCopy();
     Assert.assertEquals(2, deviceAllocationMapping.size());
     Assert.assertTrue(deviceAllocationMapping.keySet()
-        .containsAll(Arrays.asList(new GpuDevice(1, 1), new GpuDevice(2, 3))));
-    Assert.assertEquals(deviceAllocationMapping.get(new GpuDevice(1, 1)),
+        .containsAll(Arrays.asList(new GpuDevice(1, 0, 1), new GpuDevice(2, 0, 3))));
+    Assert.assertEquals(deviceAllocationMapping.get(new GpuDevice(1, 0, 1)),
         getContainerId(1));
 
     // TEST CASE
@@ -446,7 +446,7 @@ public class TestGpuResourceHandler {
     ar = new ResourceMappings.AssignedResources();
     // id=3 is already assigned
     ar.updateAssignedResources(
-        Arrays.asList(new GpuDevice(3, 4), new GpuDevice(2, 3)));
+        Arrays.asList(new GpuDevice(3, 0, 4), new GpuDevice(2, 0, 3)));
     rmap.addAssignedResources("gpu", ar);
     when(nmContainer.getResourceMappings()).thenReturn(rmap);
 
@@ -467,8 +467,8 @@ public class TestGpuResourceHandler {
         gpuResourceHandler.getGpuAllocator().getDeviceAllocationMappingCopy();
     Assert.assertEquals(2, deviceAllocationMapping.size());
     Assert.assertTrue(deviceAllocationMapping.keySet()
-        .containsAll(Arrays.asList(new GpuDevice(1, 1), new GpuDevice(2, 3))));
-    Assert.assertEquals(deviceAllocationMapping.get(new GpuDevice(1, 1)),
+        .containsAll(Arrays.asList(new GpuDevice(1, 0, 1), new GpuDevice(2, 0, 3))));
+    Assert.assertEquals(deviceAllocationMapping.get(new GpuDevice(1, 0, 1)),
         getContainerId(1));
   }
 }

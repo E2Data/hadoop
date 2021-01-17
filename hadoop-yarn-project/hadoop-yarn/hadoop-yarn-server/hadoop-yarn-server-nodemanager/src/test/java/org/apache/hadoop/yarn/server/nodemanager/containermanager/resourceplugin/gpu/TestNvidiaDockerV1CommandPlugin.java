@@ -133,7 +133,7 @@ public class TestNvidiaDockerV1CommandPlugin {
     ResourceMappings.AssignedResources assigned =
         new ResourceMappings.AssignedResources();
     assigned.updateAssignedResources(
-        ImmutableList.of(new GpuDevice(0, 0), new GpuDevice(1, 1)));
+        ImmutableList.of(new GpuDevice(0, 0, 0), new GpuDevice(1, 0, 1)));
     resourceMappings.addAssignedResources(ResourceInformation.GPU_URI,
         assigned);
 
