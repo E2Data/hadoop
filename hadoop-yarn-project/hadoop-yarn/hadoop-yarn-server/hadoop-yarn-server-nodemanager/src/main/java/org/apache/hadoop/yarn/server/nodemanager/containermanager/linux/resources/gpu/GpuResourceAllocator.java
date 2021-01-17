@@ -307,7 +307,8 @@ public class GpuResourceAllocator {
     List<AssignedGpuDevice> assigns = new ArrayList<>();
     for (Map.Entry<GpuDevice, ContainerId> entry : usedDevices.entrySet()) {
       assigns.add(new AssignedGpuDevice(entry.getKey().getIndex(),
-          entry.getKey().getMinorNumber(), entry.getValue()));
+          entry.getKey().getPlatformId(), entry.getKey().getDeviceId(),
+          entry.getValue()));
     }
     return assigns;
   }

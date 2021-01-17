@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.adapters.XmlAdapter;
 
 /**
  * Capture single GPU device information such as memory size, temperature,
@@ -38,6 +39,8 @@ public class PerGpuDeviceInformation {
   private Integer deviceId = null;
   private Long globalMemSize = null;
 
+  public PerGpuDeviceInformation() {}
+
   public PerGpuDeviceInformation(String productName,
                                  int platformId,
                                  int deviceId,
@@ -46,6 +49,54 @@ public class PerGpuDeviceInformation {
     setPlatformId(platformId);
     setDeviceId(deviceId);
     setGlobalMemSize(globalMemSize);
+  }
+
+  /**
+   * Convert formats like "34 C", "75.6 %" to float.
+   */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  static class StrToFloatBeforeSpaceAdapter extends
+      XmlAdapter<String, Float> {
+    @Override
+    public String marshal(Float v) throws Exception {
+      if (v == null) {
+        return "";
+      }
+      return String.valueOf(v);
+    }
+
+    @Override
+    public Float unmarshal(String v) throws Exception {
+      if (v == null) {
+        return -1f;
+      }
+
+      return Float.valueOf(v.split(" ")[0]);
+    }
+  }
+
+  /**
+   * Convert formats like "725 MiB" to long.
+   */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  static class StrToMemAdapter extends XmlAdapter<String, Long> {
+    @Override
+    public String marshal(Long v) throws Exception {
+      if (v == null) {
+        return "";
+      }
+      return String.valueOf(v) + " MiB";
+    }
+
+    @Override
+    public Long unmarshal(String v) throws Exception {
+      if (v == null) {
+        return -1L;
+      }
+      return Long.valueOf(v.split(" ")[0]);
+    }
   }
 
   @XmlElement(name = "product_name")

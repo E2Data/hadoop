@@ -43,7 +43,8 @@ allowed_expr+="|^org.apache.hadoop.application-classloader.properties$"
 #   * Used by JavaSandboxLinuxContainerRuntime as a default, loaded
 #     from root, so can't relocate. :(
 allowed_expr+="|^java.policy$"
-
+#   * SNIARCHOS: We have to allow the JOCL libraries
+allowed_expr+="|^lib/$|^lib/JOCL*|^lib/libJOCL*"
 
 allowed_expr+=")"
 declare -i bad_artifacts=0

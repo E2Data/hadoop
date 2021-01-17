@@ -126,12 +126,12 @@
       <artifactId>metrics-core</artifactId>
     </dependency>
 
-    <!-- Will be using JavaCL for (OpenCL enabled) GPU discovery -->
+    <!-- Will be using jocl for (OpenCL enabled) GPU discovery -->
     <!-- NOTE: Could it be used for OpenCL devices of other types as well? (CPU, FPGA, etc) -->
     <dependency>
-      <groupId>com.nativelibs4java</groupId>
-      <artifactId>javacl</artifactId>
-      <version>1.0.0-RC4</version>
+      <groupId>org.jocl</groupId>
+      <artifactId>jocl</artifactId>
+      <version>2.0.2</version>
     </dependency>
 
     <!--
@@ -389,20 +389,6 @@
                 </includes>
               </source>
             </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>3.2.4</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>shade</goal>
-            </goals>
           </execution>
         </executions>
       </plugin>

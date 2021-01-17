@@ -3,8 +3,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugi
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
 // OpenCL-enabled GPU discovery utility
-import com.nativelibs4java.opencl.*;
-import static com.nativelibs4java.opencl.library.OpenCLLibrary.*;
+import static org.jocl.CL.*;
+import org.jocl.*;
 
 /**
  * Merely a wrapper for the CLDevice object
@@ -15,17 +15,39 @@ public class OpenCLDevice {
 
   private int platformId;
   private int deviceId;
-  private CLDevice device;
+  private cl_device_id device;
 
-  public OpenCLDevice(CLDevice device, int platformId, int deviceId) {
+  public OpenCLDevice(cl_device_id device, int platformId, int deviceId) {
     this.device = device;
     this.platformId = platformId;
     this.deviceId = deviceId;
   }
 
-  public CLDevice getDevice()     { return this.device; }
+  public String       getDeviceName() { return getString(this.device, CL_DEVICE_NAME); }
 
-  public int      getPlatformId() { return this.platformId; }
+  public cl_device_id getDevice()     { return this.device; }
 
-  public int      getDeviceId()   { return this.deviceId; }
+  public int          getPlatformId() { return this.platformId; }
+
+  public int          getDeviceId()   { return this.deviceId; }
+
+  /**
+   * Returns the value of the device info parameter with the given name
+   *
+   * @param device The device
+   * @param paramName The parameter name
+   * @return The value
+   */
+  private static String getString(cl_device_id device, int paramName) {
+    // Obtain the length of the string that will be queried
+    long size[] = new long[1];
+    clGetDeviceInfo(device, paramName, 0, null, size);
+
+    // Create a buffer of the appropriate size and fill it with the info
+    byte buffer[] = new byte[(int)size[0]];
+    clGetDeviceInfo(device, paramName, buffer.length, Pointer.to(buffer), null);
+
+    // Create a string from the buffer (excluding the trailing \0 byte)
+    return new String(buffer, 0, buffer.length-1);
+  }
 }

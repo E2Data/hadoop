@@ -30,8 +30,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 // OpenCL-enabled GPU discovery utility
-import com.nativelibs4java.opencl.*;
-import static com.nativelibs4java.opencl.library.OpenCLLibrary.*;
+import static org.jocl.CL.*;
+import org.jocl.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -84,10 +84,10 @@ public class GpuDiscoverer {
 
     for (OpenCLDevice device : OpenCLGpus) {
       gpus.add(new PerGpuDeviceInformation(
-        productCanonicalName,
+        ((productCanonicalName == null) ? device.getDeviceName() : productCanonicalName),
         device.getPlatformId(),
         device.getDeviceId(),
-        device.getDevice().getGlobalMemSize()
+        getLong(device.getDevice(), CL_DEVICE_GLOBAL_MEM_SIZE)
       ));
     }
 
@@ -200,32 +200,82 @@ public class GpuDiscoverer {
 
     List<OpenCLDevice> requestedDevices = new ArrayList<OpenCLDevice>();
 
-    CLPlatform[] platforms = JavaCL.listPlatforms();
-
+    int numPlatforms[] = new int[1];
+    clGetPlatformIDs(0, null, numPlatforms);
+    LOG.info("Found " + numPlatforms[0] + " OpenCL platforms");
+    cl_platform_id platforms[] = new cl_platform_id[numPlatforms[0]];
+    clGetPlatformIDs(platforms.length, platforms, null);
+    
+    LOG.info("Collecting OpenCL enabled GPUs");
     for (int pid = 0; pid < platforms.length; pid++) {
-      try {
-        CLPlatform platform = platforms[pid];
-        CLDevice[] devices = platform.listDevices(CLDevice.Type.GPU, false);
+        int numDevices[] = new int[1];
+        clGetDeviceIDs(platforms[pid], CL_DEVICE_TYPE_ALL, 0, null, numDevices);
+        cl_device_id devices[] = new cl_device_id[numDevices[0]];
+        clGetDeviceIDs(platforms[pid], CL_DEVICE_TYPE_ALL, numDevices[0], devices, null);
         for (int did = 0; did < devices.length; did++) {
-          CLDevice device = devices[did];
-          String deviceName = device.getName();
-          String deviceCanonicalName = GpuDiscoverer.canonicalProductName(deviceName);
-          if (deviceCanonicalName.equals(productCanonicalName)) {
-            requestedDevices.add(new OpenCLDevice(device, pid, did));
-          }
+            cl_device_id device = devices[did];
+            /* examining GPUs only (but need the correct did) */
+            if ((getLong(device, CL_DEVICE_TYPE) & CL_DEVICE_TYPE_GPU) == 0) continue;
+            String deviceName = getString(device, CL_DEVICE_NAME);
+            LOG.info("Examining OpenCL enabled GPU: " + deviceName);
+            String deviceCanonicalName = GpuDiscoverer.canonicalProductName(deviceName);
+            if (productCanonicalName == null || deviceCanonicalName.equals(productCanonicalName)) {
+                requestedDevices.add(new OpenCLDevice(device, pid, did));
+            }
         }
-      } catch (CLException e) {
-        if (e.getCode() == CL_DEVICE_NOT_FOUND)
-          continue;
-        throw new YarnException("Unexpected OpenCL error", e);
-      }
-    }
+     }
 
     return requestedDevices;
 
   }
 
+  /**
+   * Returns the value of the device info parameter with the given name
+   *
+   * @param device The device
+   * @param paramName The parameter name
+   * @return The value
+   */
+  private static long getLong(cl_device_id device, int paramName) {
+      return getLongs(device, paramName, 1)[0];
+  }
+
+  /**
+   * Returns the values of the device info parameter with the given name
+   *
+   * @param device The device
+   * @param paramName The parameter name
+   * @param numValues The number of values
+   * @return The value
+   */
+  private static long[] getLongs(cl_device_id device, int paramName, int numValues) {
+      long values[] = new long[numValues];
+      clGetDeviceInfo(device, paramName, Sizeof.cl_long * numValues, Pointer.to(values), null);
+      return values;
+  }
+
+  /**
+   * Returns the value of the device info parameter with the given name
+   *
+   * @param device The device
+   * @param paramName The parameter name
+   * @return The value
+   */
+  private static String getString(cl_device_id device, int paramName) {
+      // Obtain the length of the string that will be queried
+      long size[] = new long[1];
+      clGetDeviceInfo(device, paramName, 0, null, size);
+
+      // Create a buffer of the appropriate size and fill it with the info
+      byte buffer[] = new byte[(int)size[0]];
+      clGetDeviceInfo(device, paramName, buffer.length, Pointer.to(buffer), null);
+
+      // Create a string from the buffer (excluding the trailing \0 byte)
+      return new String(buffer, 0, buffer.length-1);
+  }
+
   public static GpuDiscoverer getInstance() {
     return instance;
   }
+
 }
