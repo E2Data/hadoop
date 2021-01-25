@@ -68,7 +68,6 @@ RUN apt-get -q update && apt-get -q install -y \
     python-setuptools \
     python-wheel \
     rsync \
-    shellcheck \
     software-properties-common \
     snappy \
     sudo \
@@ -143,16 +142,13 @@ ENV FINDBUGS_HOME /usr
 ####
 # Install shellcheck (0.4.6, the latest as of 2017-09-26)
 ####
-# RUN add-apt-repository -y ppa:jonathonf/ghc-8.0.2
-# RUN apt-get -q update && apt-get -q install -y shellcheck
+RUN add-apt-repository -y ppa:jonathonf/ghc-8.0.2
+RUN apt-get -q update && apt-get -q install -y shellcheck
 
 ####
 # Install bats (0.4.0, the latest as of 2017-09-26, ships with Xenial)
 ####
 RUN apt-get -q update && apt-get -q install -y bats
-
-### PIP ###
-RUN pip2 install --upgrade pip
 
 ####
 # Install pylint at fixed version (2.0.0 removed python2 support)
@@ -168,20 +164,12 @@ RUN pip2 install python-dateutil
 ###
 # Install node.js for web UI framework (4.2.6 ships with Xenial)
 ###
-#RUN apt-get -q update && \
-#    apt-get -y install nodejs && \
-#    ln -s /usr/bin/nodejs /usr/bin/node && \
-#    apt-get -y install npm && \
-#    npm install npm@latest -g && \
-#    npm install -g bower && \
-#    npm install -g ember-cli
-
-RUN curl -L -s -S https://deb.nodesource.com/setup_10.x | bash - \
-    && apt-get install -y --no-install-recommends nodejs \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && npm install -g bower@1.8.8 \
-    && npm install -g ember-cli
+RUN apt-get -y install nodejs && \
+    ln -s /usr/bin/nodejs /usr/bin/node && \
+    apt-get -y install npm && \
+    npm install npm@latest -g && \
+    npm install -g bower && \
+    npm install -g ember-cli
 
 ###
 # Avoid out of memory errors in builds
